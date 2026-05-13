@@ -17,10 +17,19 @@ defmodule BotArmyMcp.NATS.Consumer do
   @version Mix.Project.config()[:version]
 
   # Register subjects with their metadata for runtime discovery
+  @status_subject "bot_army.mcp.status"
+
   @subjects [
-    # Add your subjects here:
-    # %{subject: "example.task.list", type: :request_reply, description: "List tasks"},
-    # %{subject: "example.event.>", type: :subscribe, description: "Example events"}
+    %{
+      subject: @status_subject,
+      type: :request_reply,
+      description: "Return MCP bridge status and registered tools"
+    },
+    %{
+      subject: "system.health.mcp",
+      type: :publish,
+      description: "MCP bot health pulse"
+    }
   ]
 
   def start_link(opts) do
@@ -49,7 +58,7 @@ defmodule BotArmyMcp.NATS.Consumer do
 
         subscriptions =
           [
-            # Add your subjects here
+            @status_subject
           ]
           |> Enum.map(fn subject ->
             case Gnat.sub(conn, self(), subject) do
@@ -89,9 +98,9 @@ defmodule BotArmyMcp.NATS.Consumer do
       # Handle request/reply patterns
       if msg.reply_to do
         case msg.topic do
-          # Add your request/reply handlers here
-          # "example.task.list" ->
-          #   handle_task_list(msg, state)
+          @status_subject ->
+            handle_status(msg, state)
+
           _ ->
             Logger.debug("Unknown request/reply subject: #{msg.topic}")
         end
@@ -129,9 +138,31 @@ defmodule BotArmyMcp.NATS.Consumer do
   end
 
   # Message routing
-  defp route_message(message, topic) do
-    # Route decoded messages to appropriate handlers
+  defp route_message(_message, topic) do
     Logger.debug("Routing message from #{topic}")
+  end
+
+  defp handle_status(msg, state) do
+    response =
+      BotArmyRuntime.NATS.Reply.ok(%{
+        "service" => "mcp",
+        "version" => @version,
+        "status" => "online",
+        "tools" => [
+          "nats_observe",
+          "nats_server_info",
+          "nats_subject_reference",
+          "bridge_request",
+          "registry_list_bots",
+          "registry_list_subjects"
+        ],
+        "mcp_server" => "nats-gateway-mcp",
+        "mcp_version" => "1.1.0"
+      })
+
+    if state.conn do
+      Gnat.pub(state.conn, msg.reply_to, response)
+    end
   end
 
   # Request/reply handlers
