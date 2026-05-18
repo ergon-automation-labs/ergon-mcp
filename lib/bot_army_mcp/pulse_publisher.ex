@@ -20,6 +20,8 @@ defmodule BotArmyMcp.PulsePublisher do
   use GenServer
   require Logger
 
+  alias BotArmyRuntime.NATS.Publisher
+
   # Under Synapse `system.health` stale window (90s); 30s cadence leaves margin for jitter.
   @health_interval_ms 30 * 1000
   @publish_interval_ms 30 * 60 * 1000
@@ -55,7 +57,7 @@ defmodule BotArmyMcp.PulsePublisher do
 
   @impl true
   def handle_cast({:record_metric, _key, _value}, state) do
-    # TODO: Track metric in state for next pulse publish
+    # NOTE: Track metric in state for next pulse publish
     {:noreply, state}
   end
 
@@ -70,12 +72,12 @@ defmodule BotArmyMcp.PulsePublisher do
       service: @service_name,
       timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
       health: signal,
-      # TODO: Add domain-specific metrics here
+      # NOTE: Add domain-specific metrics here
       # Examples: active_sessions, items_processed, errors_in_window
       metrics: %{}
     }
 
-    case BotArmyRuntime.NATS.Publisher.publish("bot.#{@service_name}.pulse", pulse) do
+    case Publisher.publish("bot.#{@service_name}.pulse", pulse) do
       {:ok, _} ->
         Logger.debug("[PulsePublisher] Published pulse: #{signal}")
 
@@ -87,7 +89,9 @@ defmodule BotArmyMcp.PulsePublisher do
   defp publish_system_health(%{started_at: started_at}) do
     tenant_id = System.get_env("BOT_ARMY_TENANT_ID") || BotArmyRuntime.Tenant.default_tenant_id()
     signal = health_signal()
-    uptime_seconds = DateTime.diff(DateTime.utc_now() |> DateTime.truncate(:second), started_at, :second)
+
+    uptime_seconds =
+      DateTime.diff(DateTime.utc_now() |> DateTime.truncate(:second), started_at, :second)
 
     case BotArmyRuntime.SynapseHealth.publish(
            source: @envelope_source,
@@ -105,7 +109,7 @@ defmodule BotArmyMcp.PulsePublisher do
   end
 
   defp health_signal do
-    # TODO: Implement health signal logic based on domain metrics
+    # NOTE: Implement health signal logic based on domain metrics
     # Examples:
     #   - Return :critical if error_count > threshold
     #   - Return :degraded if activity_count == 0
