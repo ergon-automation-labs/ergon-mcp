@@ -1,0 +1,10 @@
+/_build
+/deps
+/.cache
+erl_crash.dump
+*.ez
+bot_army_mcp-*.tar
+/tmp
+/cover
+/doc
+/.fetch
