@@ -1,0 +1,7 @@
+{
+  "name": "registry_list_bots",
+  "description": "Query runtime registry for registered bots, versions, and subjects",
+  "tags": ["registry", "discovery", "infra"],
+  "requires_config": [],
+  "trust_tier": "official"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "registry_list_subjects",
+  "description": "Query runtime registry for all known NATS subjects",
+  "tags": ["registry", "discovery", "nats"],
+  "requires_config": [],
+  "trust_tier": "official"
+}

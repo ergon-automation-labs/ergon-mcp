@@ -52,7 +52,13 @@ defmodule BotArmyMcp.Application do
       # Bot-specific workers and pollers go here (GenServers that do async work)
       # Examples: Scheduler, Poller, Watcher
       # Pattern: gated with if @env == :test to prevent long-running processes in test
-      [{BotArmyMcp.NATS.Consumer, []} | children]
+      [
+        {BotArmyMcp.CatalogStore, []},
+        {BotArmyMcp.ConfigStore, []},
+        {BotArmyMcp.CatalogFetcher, []},
+        {BotArmyMcp.NATS.Consumer, []}
+        | children
+      ]
     end
   end
 end

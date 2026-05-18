@@ -1,0 +1,7 @@
+{
+  "name": "nats_server_info",
+  "description": "Return NATS connection status and server info",
+  "tags": ["nats", "infra", "monitoring"],
+  "requires_config": [],
+  "trust_tier": "official"
+}
