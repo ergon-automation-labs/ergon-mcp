@@ -155,6 +155,24 @@ defmodule BotArmyMcp.NATS.Consumer do
     {:noreply, state}
   end
 
+  @impl true
+  def handle_info({:nats, :disconnected}, state) do
+    Logger.warning("Disconnected from NATS, will reconnect")
+    Process.send_after(self(), :connect_retry, @reconnect_delay_ms)
+    {:noreply, %{state | subscriptions: [], conn: nil}}
+  end
+
+  @impl true
+  def handle_info({:nats, :connected}, state) do
+    Logger.info("Reconnected to NATS, re-subscribing")
+    {:noreply, state, {:continue, :connect}}
+  end
+
+  @impl true
+  def handle_info(:reconnect, state) do
+    {:noreply, state, {:continue, :connect}}
+  end
+
   defp dispatch_message(msg, state) do
     if msg.reply_to do
       dispatch_request_reply(msg, state)
@@ -186,27 +204,9 @@ defmodule BotArmyMcp.NATS.Consumer do
     end
   end
 
-  @impl true
-  def handle_info({:nats, :disconnected}, state) do
-    Logger.warning("Disconnected from NATS, will reconnect")
-    Process.send_after(self(), :connect_retry, @reconnect_delay_ms)
-    {:noreply, %{state | subscriptions: [], conn: nil}}
-  end
-
-  @impl true
-  def handle_info({:nats, :connected}, state) do
-    Logger.info("Reconnected to NATS, re-subscribing")
-    {:noreply, state, {:continue, :connect}}
-  end
-
-  @impl true
-  def handle_info(:reconnect, state) do
-    {:noreply, state, {:continue, :connect}}
-  end
-
   defp subscribe_subjects(conn, subjects) do
-    Enum.map(subjects, &do_subscribe(conn, &1 / 1))
-    |> Enum.filter(&(not is_nil(&1 / 1)))
+    Enum.map(subjects, &do_subscribe(conn, &1))
+    |> Enum.filter(&(not is_nil(&1)))
   end
 
   defp do_subscribe(conn, subject) do
@@ -380,47 +380,8 @@ defmodule BotArmyMcp.NATS.Consumer do
   defp handle_tools_register(msg, state) do
     response =
       case Decoder.decode(msg.body) do
-        {:ok, payload} ->
-          slug = Map.get(payload, "slug")
-          tenant_id = Map.get(payload, "tenant_id", "default")
-          config = Map.get(payload, "config", %{})
-
-          if is_nil(slug) or slug == "" do
-            Reply.error("missing slug", :bad_request)
-          else
-            case CatalogStore.lookup_entry(slug) do
-              nil ->
-                Reply.error("tool not found in catalog: #{slug}", :not_found)
-
-              entry ->
-                required = Map.get(entry, "requires_config", [])
-
-                missing =
-                  Enum.reject(required, fn key ->
-                    Map.has_key?(config, key) or
-                      ConfigStore.keys_present?(tenant_id, slug, [key])
-                  end)
-
-                if missing != [] do
-                  Reply.error(
-                    "missing required config keys: #{Enum.join(missing, ", ")}",
-                    :missing_config
-                  )
-                else
-                  CatalogStore.register_tool(tenant_id, slug, config)
-
-                  Reply.ok(%{
-                    "slug" => slug,
-                    "tenant_id" => tenant_id,
-                    "registered" => true,
-                    "config_keys" => Map.keys(config)
-                  })
-                end
-            end
-          end
-
-        {:error, reason} ->
-          Reply.error("invalid payload: #{inspect(reason)}", :bad_request)
+        {:ok, payload} -> build_register_response(payload)
+        {:error, reason} -> Reply.error("invalid payload: #{inspect(reason)}", :bad_request)
       end
 
     if state.conn do
@@ -428,38 +389,84 @@ defmodule BotArmyMcp.NATS.Consumer do
     end
   end
 
+  defp build_register_response(payload) do
+    slug = Map.get(payload, "slug")
+
+    if is_nil(slug) or slug == "" do
+      Reply.error("missing slug", :bad_request)
+    else
+      do_register_lookup(slug, payload)
+    end
+  end
+
+  defp do_register_lookup(slug, payload) do
+    tenant_id = Map.get(payload, "tenant_id", "default")
+    config = Map.get(payload, "config", %{})
+
+    case CatalogStore.lookup_entry(slug) do
+      nil -> Reply.error("tool not found in catalog: #{slug}", :not_found)
+      entry -> do_register_validate(entry, slug, tenant_id, config)
+    end
+  end
+
+  defp do_register_validate(entry, slug, tenant_id, config) do
+    required = Map.get(entry, "requires_config", [])
+
+    missing =
+      Enum.reject(required, fn key ->
+        Map.has_key?(config, key) or ConfigStore.keys_present?(tenant_id, slug, [key])
+      end)
+
+    if missing != [] do
+      Reply.error(
+        "missing required config keys: #{Enum.join(missing, ", ")}",
+        :missing_config
+      )
+    else
+      CatalogStore.register_tool(tenant_id, slug, config)
+
+      Reply.ok(%{
+        "slug" => slug,
+        "tenant_id" => tenant_id,
+        "registered" => true,
+        "config_keys" => Map.keys(config)
+      })
+    end
+  end
+
   # Config handlers
   defp handle_config_get(msg, state) do
     response =
       case Decoder.decode(msg.body) do
-        {:ok, payload} ->
-          tenant_id = Map.get(payload, "tenant_id", "default")
-          tool_slug = Map.get(payload, "tool_slug")
-          key = Map.get(payload, "key")
-
-          if is_nil(tool_slug) or is_nil(key) do
-            Reply.error("missing tool_slug or key", :bad_request)
-          else
-            case ConfigStore.get(tenant_id, tool_slug, key) do
-              {:ok, value} ->
-                Reply.ok(%{
-                  "tenant_id" => tenant_id,
-                  "tool_slug" => tool_slug,
-                  "key" => key,
-                  "value" => value
-                })
-
-              {:error, :not_found} ->
-                Reply.error("config not found", :not_found)
-            end
-          end
-
-        {:error, reason} ->
-          Reply.error("invalid payload: #{inspect(reason)}", :bad_request)
+        {:ok, payload} -> do_config_get(payload)
+        {:error, reason} -> Reply.error("invalid payload: #{inspect(reason)}", :bad_request)
       end
 
     if state.conn do
       Gnat.pub(state.conn, msg.reply_to, response)
+    end
+  end
+
+  defp do_config_get(payload) do
+    tenant_id = Map.get(payload, "tenant_id", "default")
+    tool_slug = Map.get(payload, "tool_slug")
+    key = Map.get(payload, "key")
+
+    if is_nil(tool_slug) or is_nil(key) do
+      Reply.error("missing tool_slug or key", :bad_request)
+    else
+      case ConfigStore.get(tenant_id, tool_slug, key) do
+        {:ok, value} ->
+          Reply.ok(%{
+            "tenant_id" => tenant_id,
+            "tool_slug" => tool_slug,
+            "key" => key,
+            "value" => value
+          })
+
+        {:error, :not_found} ->
+          Reply.error("config not found", :not_found)
+      end
     end
   end
 

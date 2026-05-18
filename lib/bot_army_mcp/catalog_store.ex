@@ -141,28 +141,34 @@ defmodule BotArmyMcp.CatalogStore do
       {:ok, names} ->
         names
         |> Enum.filter(&String.ends_with?(&1, ".json"))
-        |> Enum.each(fn name ->
-          path = Path.join(root, name)
-          slug = Path.rootname(name)
-
-          case File.read(path) do
-            {:ok, content} ->
-              case Jason.decode(content) do
-                {:ok, entry} ->
-                  entry = Map.merge(entry, %{"slug" => slug, "source" => "canonical"})
-                  :ets.insert(@catalog_table, {slug, entry})
-
-                {:error, reason} ->
-                  Logger.warning("[CatalogStore] Failed to parse #{name}: #{inspect(reason)}")
-              end
-
-            {:error, reason} ->
-              Logger.warning("[CatalogStore] Failed to read #{name}: #{inspect(reason)}")
-          end
-        end)
+        |> Enum.each(&load_canonical_file(root, &1))
 
       {:error, reason} ->
         Logger.warning("[CatalogStore] Failed to list canonical dir: #{inspect(reason)}")
+    end
+  end
+
+  defp load_canonical_file(root, name) do
+    path = Path.join(root, name)
+    slug = Path.rootname(name)
+
+    case File.read(path) do
+      {:ok, content} ->
+        parse_canonical_content(name, slug, content)
+
+      {:error, reason} ->
+        Logger.warning("[CatalogStore] Failed to read #{name}: #{inspect(reason)}")
+    end
+  end
+
+  defp parse_canonical_content(name, slug, content) do
+    case Jason.decode(content) do
+      {:ok, entry} ->
+        entry = Map.merge(entry, %{"slug" => slug, "source" => "canonical"})
+        :ets.insert(@catalog_table, {slug, entry})
+
+      {:error, reason} ->
+        Logger.warning("[CatalogStore] Failed to parse #{name}: #{inspect(reason)}")
     end
   end
 end
