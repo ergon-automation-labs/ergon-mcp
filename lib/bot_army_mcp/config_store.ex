@@ -91,7 +91,7 @@ defmodule BotArmyMcp.ConfigStore do
   defp redact?(key, value) do
     sensitive = ["api_key", "token", "secret", "password", "private_key"]
 
-    if Enum.any?(sensitive, &String.contains?(String.downcase(key), &1 / 1)) do
+    if Enum.any?(sensitive, &String.contains?(String.downcase(key), &1)) do
       mask(value)
     else
       value
