@@ -8,3 +8,7 @@ bot_army_mcp-*.tar
 /cover
 /doc
 /.fetch
+
+# Build artifacts
+*.tar.gz
+*.tar.xz
