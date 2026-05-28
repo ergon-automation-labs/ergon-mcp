@@ -129,7 +129,8 @@ defmodule BotArmyMcp.NATS.Consumer do
           ])
 
         # Register subjects for runtime discovery
-        Registry.register("mcp", @subjects, @version)
+        deployment_status = Application.get_env(:bot_army_mcp, :deployment_status, "experimental")
+        Registry.register("mcp", @subjects, @version, deployment_status)
 
         {:noreply, %{state | subscriptions: subscriptions, conn: conn}}
 
