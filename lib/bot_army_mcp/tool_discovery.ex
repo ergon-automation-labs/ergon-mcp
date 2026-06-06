@@ -150,7 +150,7 @@ defmodule BotArmyMcp.ToolDiscovery do
 
   defp extract_tools_from_bot(%{"name" => bot_name, "subjects" => subjects}) do
     subjects
-    |> Enum.filter(&is_callable_tool/1)
+    |> Enum.filter(&callable_tool?/1)
     |> Enum.map(&to_mcp_tool_definition(&1, bot_name))
   end
 
