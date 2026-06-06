@@ -103,33 +103,28 @@ defmodule BotArmyMcp.ToolDiscovery do
   end
 
   defp fetch_tools_from_registry do
-    try do
-      case GenServer.whereis(Connection) do
-        nil ->
-          {:error, :nats_connection_unavailable}
+    case GenServer.whereis(Connection) do
+      nil ->
+        {:error, :nats_connection_unavailable}
 
-        _ ->
-          case GenServer.call(Connection, :get_connection, @timeout_ms) do
-            {:ok, conn} ->
-              # Query registry for all bots
-              case Gnat.request(conn, @registry_subject, "{}", receive_timeout: @timeout_ms) do
-                {:ok, %{body: body}} ->
-                  parse_registry_response(body)
+      _ ->
+        case GenServer.call(Connection, :get_connection, @timeout_ms) do
+          {:ok, conn} ->
+            # Query registry for all bots
+            case Gnat.request(conn, @registry_subject, "{}", receive_timeout: @timeout_ms) do
+              {:ok, %{body: body}} ->
+                parse_registry_response(body)
 
-                {:error, :timeout} ->
-                  {:error, :registry_timeout}
+              {:error, :timeout} ->
+                {:error, :registry_timeout}
 
-                {:error, reason} ->
-                  {:error, reason}
-              end
+              {:error, reason} ->
+                {:error, reason}
+            end
 
-            {:error, reason} ->
-              {:error, reason}
-          end
-      end
-    rescue
-      e ->
-        {:error, {:exception, inspect(e)}}
+          {:error, reason} ->
+            {:error, reason}
+        end
     end
   end
 

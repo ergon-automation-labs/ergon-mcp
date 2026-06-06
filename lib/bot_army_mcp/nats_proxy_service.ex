@@ -37,18 +37,12 @@ defmodule BotArmyMcp.NATSProxyService do
         agent_context \\ nil,
         timeout_ms \\ @default_timeout_ms
       ) do
-    try do
-      if BotArmyMcp.CircuitBreaker.available?(tool_name) do
-        call_with_connection(Connection, tool_name, arguments, agent_context, timeout_ms)
-      else
-        status = BotArmyMcp.CircuitBreaker.status(tool_name)
-        Logger.warning("Circuit breaker open for #{tool_name}: #{status.last_error}")
-        {:error, {:circuit_open, "Too many failures for #{tool_name}"}}
-      end
-    rescue
-      e ->
-        Logger.error("Exception in NATS proxy: #{inspect(e)}")
-        {:error, {:exception, inspect(e)}}
+    if BotArmyMcp.CircuitBreaker.available?(tool_name) do
+      call_with_connection(Connection, tool_name, arguments, agent_context, timeout_ms)
+    else
+      status = BotArmyMcp.CircuitBreaker.status(tool_name)
+      Logger.warning("Circuit breaker open for #{tool_name}: #{status.last_error}")
+      {:error, {:circuit_open, "Too many failures for #{tool_name}"}}
     end
   end
 
@@ -73,21 +67,28 @@ defmodule BotArmyMcp.NATSProxyService do
   end
 
   defp execute_nats_request(conn, subject, arguments, agent_context, timeout_ms) do
-    body =
+    envelope =
       if agent_context do
-        AgentContext.build_envelope(agent_context, subject, arguments) |> Jason.encode!()
+        AgentContext.build_envelope(agent_context, subject, arguments)
       else
-        Jason.encode!(arguments)
+        arguments
       end
 
-    result = perform_request(conn, subject, body, timeout_ms)
+    case Jason.encode(envelope) do
+      {:ok, body} ->
+        result = perform_request(conn, subject, body, timeout_ms)
 
-    case result do
-      {:ok, _} -> BotArmyMcp.CircuitBreaker.record_success(subject)
-      {:error, reason} -> BotArmyMcp.CircuitBreaker.record_failure(subject, reason)
+        case result do
+          {:ok, _} -> BotArmyMcp.CircuitBreaker.record_success(subject)
+          {:error, reason} -> BotArmyMcp.CircuitBreaker.record_failure(subject, reason)
+        end
+
+        result
+
+      {:error, reason} ->
+        Logger.error("Failed to encode NATS request: #{inspect(reason)}")
+        {:error, {:encode_error, reason}}
     end
-
-    result
   end
 
   defp perform_request(conn, subject, body, timeout_ms) do
