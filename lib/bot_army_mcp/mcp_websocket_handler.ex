@@ -14,8 +14,8 @@ defmodule BotArmyMcp.MCPWebSocketHandler do
 
   require Logger
 
-  alias BotArmyMcp.MCPProtocol
   alias BotArmyMcp.AgentContext
+  alias BotArmyMcp.MCPProtocol
 
   @doc "Cowboy WebSocket handler init callback"
   def init(req, _state) do
@@ -42,7 +42,7 @@ defmodule BotArmyMcp.MCPWebSocketHandler do
         error_response =
           Jason.encode!(%{
             "jsonrpc" => "2.0",
-            "error" => %{"code" => -32603, "message" => "Internal server error"}
+            "error" => %{"code" => -32_603, "message" => "Internal server error"}
           })
 
         {:reply, {:text, error_response}, state}

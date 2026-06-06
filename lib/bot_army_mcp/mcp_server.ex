@@ -49,6 +49,8 @@ end
 
 # Health check endpoint (for monitoring)
 defmodule BotArmyMcp.HealthPlug do
+  @moduledoc "HTTP health check endpoint"
+
   def init(opts), do: opts
 
   def call(conn, _opts) do

@@ -12,8 +12,8 @@ defmodule BotArmyMcp.MCPProtocol do
 
   require Logger
 
-  alias BotArmyMcp.ToolDiscovery
   alias BotArmyMcp.NATSProxyService
+  alias BotArmyMcp.ToolDiscovery
 
   @mcp_version "2024-11-05"
   @server_name "bot_army_mcp"
@@ -138,13 +138,13 @@ defmodule BotArmyMcp.MCPProtocol do
   end
 
   defp error_response(id, message, data) when is_nil(id) do
-    error_body = %{"code" => -32603, "message" => message}
+    error_body = %{"code" => -32_603, "message" => message}
     error_body = if data, do: Map.put(error_body, "data", data), else: error_body
     %{"jsonrpc" => "2.0", "error" => error_body}
   end
 
   defp error_response(id, message, data) do
-    error_body = %{"code" => -32603, "message" => message}
+    error_body = %{"code" => -32_603, "message" => message}
     error_body = if data, do: Map.put(error_body, "data", data), else: error_body
     %{"jsonrpc" => "2.0", "id" => id, "error" => error_body}
   end
