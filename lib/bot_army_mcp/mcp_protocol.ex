@@ -30,10 +30,10 @@ defmodule BotArmyMcp.MCPProtocol do
     "params": {...}
   }
 
-  Returns: {:ok, response_json, updated_agent_context} | {:error, reason}
+  Always returns {:ok, response_json, updated_agent_context}. Errors are encoded
+  as JSON-RPC 2.0 error responses.
   """
-  @spec handle_request(String.t(), map()) ::
-          {:ok, String.t(), map()} | {:error, term()}
+  @spec handle_request(String.t(), map()) :: {:ok, String.t(), map()}
   def handle_request(json_string, agent_context) do
     with {:ok, request} <- Jason.decode(json_string),
          {:ok, response, updated_context} <- process_request(request, agent_context) do

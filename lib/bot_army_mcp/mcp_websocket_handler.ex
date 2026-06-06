@@ -32,21 +32,8 @@ defmodule BotArmyMcp.MCPWebSocketHandler do
 
   @doc "Handle incoming WebSocket frames"
   def websocket_handle({:text, data}, state) do
-    case MCPProtocol.handle_request(data, state.agent_context) do
-      {:ok, response, updated_context} ->
-        {:reply, {:text, response}, %{state | agent_context: updated_context}}
-
-      {:error, reason} ->
-        Logger.error("MCP request error: #{inspect(reason)}")
-
-        error_response =
-          Jason.encode!(%{
-            "jsonrpc" => "2.0",
-            "error" => %{"code" => -32_603, "message" => "Internal server error"}
-          })
-
-        {:reply, {:text, error_response}, state}
-    end
+    {:ok, response, updated_context} = MCPProtocol.handle_request(data, state.agent_context)
+    {:reply, {:text, response}, %{state | agent_context: updated_context}}
   end
 
   def websocket_handle({:binary, _data}, state) do

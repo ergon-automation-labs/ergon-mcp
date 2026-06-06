@@ -93,12 +93,6 @@ defmodule BotArmyMcp.NATS.AgentContextResponder do
   end
 
   defp reply_traced(conn, reply_to, response) do
-    case Gnat.pub(conn, reply_to, response) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to reply to agent context query: #{inspect(reason)}")
-    end
+    :ok = Gnat.pub(conn, reply_to, response)
   end
 end
