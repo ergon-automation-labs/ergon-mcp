@@ -53,6 +53,8 @@ defmodule BotArmyMcp.Application do
       # Examples: Scheduler, Poller, Watcher
       # Pattern: gated with if @env == :test to prevent long-running processes in test
       [
+        {BotArmyMcp.ToolDiscovery, [cache_ttl_ms: 60_000]},
+        {BotArmyMcp.MCPServer, [port: 14_223]},
         {BotArmyMcp.CatalogStore, []},
         {BotArmyMcp.ConfigStore, []},
         {BotArmyMcp.CatalogFetcher, []},

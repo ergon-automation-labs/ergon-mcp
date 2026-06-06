@@ -125,7 +125,15 @@ defmodule BotArmyMcp.NATS.Consumer do
             @tools_register_subject,
             @config_get_subject,
             @config_set_subject,
-            @config_list_subject
+            @config_list_subject,
+            @github_pr_get_subject,
+            @github_issue_list_subject,
+            @github_repo_file_subject,
+            @github_ci_status_subject,
+            @github_pr_comment_subject,
+            @github_issue_create_subject,
+            @github_issue_close_subject,
+            @github_pr_approve_subject
           ])
 
         # Register subjects for runtime discovery

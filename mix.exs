@@ -4,7 +4,7 @@ defmodule BotArmyMcp.MixProject do
   def project do
     [
       app: :bot_army_mcp,
-      version: "0.1.7",
+      version: "0.2.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -33,6 +33,7 @@ defmodule BotArmyMcp.MixProject do
       {:logger_json, "~> 5.1"},
       {:elixir_uuid, "~> 1.2"},
       {:req, "~> 0.3"},
+      {:plug_cowboy, "~> 2.6"},
 
       # Development/Test
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
