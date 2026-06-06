@@ -24,6 +24,7 @@ defmodule BotArmyMcp.MCPServer do
 
   @doc "Start the MCP WebSocket server on the specified port"
   @spec start_server(non_neg_integer()) :: {:ok, term()} | {:error, term()}
+  @dialyzer {:no_return, start_server: 1}
   def start_server(port) do
     dispatch = [
       {:_,
