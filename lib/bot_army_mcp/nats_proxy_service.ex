@@ -38,12 +38,12 @@ defmodule BotArmyMcp.NATSProxyService do
         timeout_ms \\ @default_timeout_ms
       ) do
     try do
-      unless BotArmyMcp.CircuitBreaker.available?(tool_name) do
+      if BotArmyMcp.CircuitBreaker.available?(tool_name) do
+        call_with_connection(Connection, tool_name, arguments, agent_context, timeout_ms)
+      else
         status = BotArmyMcp.CircuitBreaker.status(tool_name)
         Logger.warning("Circuit breaker open for #{tool_name}: #{status.last_error}")
         {:error, {:circuit_open, "Too many failures for #{tool_name}"}}
-      else
-        call_with_connection(Connection, tool_name, arguments, agent_context, timeout_ms)
       end
     rescue
       e ->

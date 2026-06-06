@@ -154,7 +154,7 @@ defmodule BotArmyMcp.ToolDiscovery do
     |> Enum.map(&to_mcp_tool_definition(&1, bot_name))
   end
 
-  defp is_callable_tool(subject) do
+  defp callable_tool?(subject) do
     subject["type"] == "request_reply" && exclude_system_subjects(subject)
   end
 
