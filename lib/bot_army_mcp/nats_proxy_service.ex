@@ -69,7 +69,6 @@ defmodule BotArmyMcp.NATSProxyService do
   alias BotArmyMcp.AgentContext
 
   defp execute_nats_request(conn, subject, arguments, agent_context, timeout_ms) do
-    # Build request body with optional agent context
     body =
       if agent_context do
         AgentContext.build_envelope(agent_context, subject, arguments) |> Jason.encode!()
@@ -77,48 +76,43 @@ defmodule BotArmyMcp.NATSProxyService do
         Jason.encode!(arguments)
       end
 
-    result =
-      case Gnat.request(conn, subject, body, receive_timeout: timeout_ms) do
-        {:ok, %{body: response_body}} ->
-          case Jason.decode(response_body) do
-            {:ok, data} ->
-              # Unwrap from standard Bot Army response envelope
-              case data do
-                %{"ok" => true, "data" => payload} ->
-                  {:ok, payload}
+    result = perform_request(conn, subject, body, timeout_ms)
 
-                %{"ok" => true} ->
-                  {:ok, data}
-
-                %{"ok" => false, "error" => error} ->
-                  {:error, {:tool_error, error}}
-
-                _ ->
-                  {:ok, data}
-              end
-
-            {:error, reason} ->
-              Logger.error("Failed to decode NATS response: #{inspect(reason)}")
-              {:error, {:decode_error, reason}}
-          end
-
-        {:error, :timeout} ->
-          {:error, {:timeout, "Tool execution exceeded #{timeout_ms}ms"}}
-
-        {:error, reason} ->
-          Logger.error("NATS request failed: #{inspect(reason)}")
-          {:error, reason}
-      end
-
-    # Record result in circuit breaker
     case result do
-      {:ok, _} ->
-        BotArmyMcp.CircuitBreaker.record_success(subject)
-
-      {:error, reason} ->
-        BotArmyMcp.CircuitBreaker.record_failure(subject, reason)
+      {:ok, _} -> BotArmyMcp.CircuitBreaker.record_success(subject)
+      {:error, reason} -> BotArmyMcp.CircuitBreaker.record_failure(subject, reason)
     end
 
     result
   end
+
+  defp perform_request(conn, subject, body, timeout_ms) do
+    case Gnat.request(conn, subject, body, receive_timeout: timeout_ms) do
+      {:ok, %{body: response_body}} ->
+        decode_response(response_body)
+
+      {:error, :timeout} ->
+        {:error, {:timeout, "Tool execution exceeded #{timeout_ms}ms"}}
+
+      {:error, reason} ->
+        Logger.error("NATS request failed: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  defp decode_response(response_body) do
+    case Jason.decode(response_body) do
+      {:ok, data} ->
+        unwrap_envelope(data)
+
+      {:error, reason} ->
+        Logger.error("Failed to decode NATS response: #{inspect(reason)}")
+        {:error, {:decode_error, reason}}
+    end
+  end
+
+  defp unwrap_envelope(%{"ok" => true, "data" => payload}), do: {:ok, payload}
+  defp unwrap_envelope(%{"ok" => true}), do: {:ok, %{}}
+  defp unwrap_envelope(%{"ok" => false, "error" => error}), do: {:error, {:tool_error, error}}
+  defp unwrap_envelope(data), do: {:ok, data}
 end

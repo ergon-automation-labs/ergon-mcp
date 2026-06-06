@@ -44,24 +44,32 @@ defmodule BotArmyMcp.NATS.AgentContextResponder do
         {:noreply, state}
 
       _ ->
-        case GenServer.call(Connection, :get_connection, 5000) do
-          {:ok, conn} ->
-            case Gnat.sub(conn, self(), @subject) do
-              {:ok, sub} ->
-                Logger.info("Agent context responder subscribed to #{@subject}")
-                {:noreply, %{state | subscription: sub, conn: conn}}
+        attempt_subscribe(state)
+    end
+  end
 
-              {:error, reason} ->
-                Logger.error("Failed to subscribe to #{@subject}: #{inspect(reason)}")
-                Process.send_after(self(), :subscribe, 5000)
-                {:noreply, state}
-            end
+  defp attempt_subscribe(state) do
+    case GenServer.call(Connection, :get_connection, 5000) do
+      {:ok, conn} ->
+        subscribe_to_subject(conn, state)
 
-          {:error, reason} ->
-            Logger.error("Failed to get NATS connection: #{inspect(reason)}")
-            Process.send_after(self(), :subscribe, 5000)
-            {:noreply, state}
-        end
+      {:error, reason} ->
+        Logger.error("Failed to get NATS connection: #{inspect(reason)}")
+        Process.send_after(self(), :subscribe, 5000)
+        {:noreply, state}
+    end
+  end
+
+  defp subscribe_to_subject(conn, state) do
+    case Gnat.sub(conn, self(), @subject) do
+      {:ok, sub} ->
+        Logger.info("Agent context responder subscribed to #{@subject}")
+        {:noreply, %{state | subscription: sub, conn: conn}}
+
+      {:error, reason} ->
+        Logger.error("Failed to subscribe to #{@subject}: #{inspect(reason)}")
+        Process.send_after(self(), :subscribe, 5000)
+        {:noreply, state}
     end
   end
 
