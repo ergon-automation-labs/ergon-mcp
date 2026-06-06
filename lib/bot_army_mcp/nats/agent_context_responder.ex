@@ -48,6 +48,25 @@ defmodule BotArmyMcp.NATS.AgentContextResponder do
     end
   end
 
+  @impl true
+  def handle_info({:msg, %{reply_to: reply_to}}, state) when is_binary(reply_to) do
+    response = %{
+      "ok" => true,
+      "data" => %{
+        "available" => true,
+        "implementation" => "Phase 2 agent context tracking"
+      }
+    }
+
+    reply_traced(state.conn, reply_to, Jason.encode!(response))
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(_, state) do
+    {:noreply, state}
+  end
+
   defp attempt_subscribe(state) do
     case GenServer.call(Connection, :get_connection, 5000) do
       {:ok, conn} ->
@@ -71,25 +90,6 @@ defmodule BotArmyMcp.NATS.AgentContextResponder do
         Process.send_after(self(), :subscribe, 5000)
         {:noreply, state}
     end
-  end
-
-  @impl true
-  def handle_info({:msg, %{reply_to: reply_to}}, state) when is_binary(reply_to) do
-    # Return current agent context info
-    response = %{
-      "ok" => true,
-      "data" => %{
-        "available" => true,
-        "implementation" => "Phase 2 agent context tracking"
-      }
-    }
-
-    reply_traced(state.conn, reply_to, Jason.encode!(response))
-    {:noreply, state}
-  end
-
-  def handle_info(_, state) do
-    {:noreply, state}
   end
 
   defp reply_traced(conn, reply_to, response) do

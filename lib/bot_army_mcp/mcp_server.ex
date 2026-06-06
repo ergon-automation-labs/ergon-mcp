@@ -6,6 +6,10 @@ defmodule BotArmyMcp.MCPServer do
   connections. Claude Code clients can connect to ws://localhost:{port}/mcp
   """
 
+  @dialyzer {:no_return, start_link: 0}
+  @dialyzer {:no_return, start_link: 1}
+  @dialyzer {:no_fail_call, start_server: 1}
+
   require Logger
 
   def start_link(opts \\ []) do
