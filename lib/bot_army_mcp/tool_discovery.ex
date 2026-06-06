@@ -26,8 +26,7 @@ defmodule BotArmyMcp.ToolDiscovery do
   end
 
   @doc "Get list of all available MCP tools (request_reply subjects only)."
-  @spec list_tools() :: {:ok, [tool_definition()]} | {:error, term()}
-        when tool_definition: map()
+  @spec list_tools() :: {:ok, [map()]} | {:error, term()}
   def list_tools do
     GenServer.call(__MODULE__, :list_tools)
   end
