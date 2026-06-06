@@ -53,7 +53,7 @@ defmodule BotArmyMcp.MCPProtocol do
 
   alias BotArmyMcp.AgentContext
 
-  defp process_request(%{"jsonrpc" => "2.0", "method" => method} = request, agent_context) do
+  defp process_request(%{"jsonrpc" => "2.0", "method" => method} = request, _agent_context) do
     id = Map.get(request, "id")
     params = Map.get(request, "params", %{})
 
@@ -125,7 +125,7 @@ defmodule BotArmyMcp.MCPProtocol do
     end
   end
 
-  defp handle_method(method, _params, agent_context) do
+  defp handle_method(method, _params, _agent_context) do
     {:error, "Unknown method: #{method}"}
   end
 

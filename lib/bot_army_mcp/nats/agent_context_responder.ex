@@ -21,8 +21,7 @@ defmodule BotArmyMcp.NATS.AgentContextResponder do
   use GenServer
   require Logger
 
-  alias BotArmyRuntime.NATS.{Connection, Reply}
-  alias BotArmyMcp.AgentContext
+  alias BotArmyRuntime.NATS.Connection
 
   @subject "bot_army.agent.context.get"
 
@@ -67,13 +66,15 @@ defmodule BotArmyMcp.NATS.AgentContextResponder do
   end
 
   @impl true
-  def handle_info({:msg, %{reply_to: reply_to} = msg}, state) when is_binary(reply_to) do
+  def handle_info({:msg, %{reply_to: reply_to}}, state) when is_binary(reply_to) do
     # Return current agent context info
-    response =
-      Reply.ok(%{
+    response = %{
+      "ok" => true,
+      "data" => %{
         "available" => true,
         "implementation" => "Phase 2 agent context tracking"
-      })
+      }
+    }
 
     reply_traced(state.conn, reply_to, Jason.encode!(response))
     {:noreply, state}
