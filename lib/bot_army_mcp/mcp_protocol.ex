@@ -40,7 +40,7 @@ defmodule BotArmyMcp.MCPProtocol do
       {:ok, Jason.encode!(response), updated_context}
     else
       {:error, reason} ->
-        error_response = error_response(nil, "Invalid request", reason)
+        error_response = error_response(nil, "Invalid request", inspect(reason))
         {:ok, Jason.encode!(error_response), agent_context}
 
       error ->

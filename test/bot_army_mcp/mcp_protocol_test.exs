@@ -53,8 +53,9 @@ defmodule BotArmyMcp.MCPProtocolTest do
       assert response["error"]["message"] =~ "Invalid request"
     end
 
+    @tag :nats_live
     test "handles tools/list request", %{agent_context: agent_context} do
-      # Mock or skip if ToolDiscovery unavailable
+      # Requires live ToolDiscovery and NATS connection
       request =
         Jason.encode!(%{
           "jsonrpc" => "2.0",
