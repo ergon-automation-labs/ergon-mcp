@@ -20,7 +20,7 @@ defmodule BotArmyMcp.MCPProtocol do
   @server_version Mix.Project.config()[:version]
 
   @doc """
-  Process an incoming MCP request and return a response.
+  Process an incoming MCP request and return a response with updated agent context.
 
   Expects JSON-RPC 2.0 format:
   {
@@ -29,48 +29,53 @@ defmodule BotArmyMcp.MCPProtocol do
     "method": "<method>",
     "params": {...}
   }
+
+  Returns: {:ok, response_json, updated_agent_context} | {:error, reason}
   """
-  @spec handle_request(String.t()) :: {:ok, String.t()} | {:error, term()}
-  def handle_request(json_string) do
+  @spec handle_request(String.t(), map()) ::
+          {:ok, String.t(), map()} | {:error, term()}
+  def handle_request(json_string, agent_context) do
     with {:ok, request} <- Jason.decode(json_string),
-         {:ok, response} <- process_request(request) do
-      {:ok, Jason.encode!(response)}
+         {:ok, response, updated_context} <- process_request(request, agent_context) do
+      {:ok, Jason.encode!(response), updated_context}
     else
       {:error, reason} ->
         error_response = error_response(nil, "Invalid request", reason)
-        {:ok, Jason.encode!(error_response)}
+        {:ok, Jason.encode!(error_response), agent_context}
 
       error ->
         error_response = error_response(nil, "Server error", inspect(error))
-        {:ok, Jason.encode!(error_response)}
+        {:ok, Jason.encode!(error_response), agent_context}
     end
   end
 
   # Private
 
-  defp process_request(%{"jsonrpc" => "2.0", "method" => method} = request) do
+  alias BotArmyMcp.AgentContext
+
+  defp process_request(%{"jsonrpc" => "2.0", "method" => method} = request, agent_context) do
     id = Map.get(request, "id")
     params = Map.get(request, "params", %{})
 
-    case handle_method(method, params) do
-      {:ok, result} ->
-        {:ok, json_rpc_response(id, result)}
+    case handle_method(method, params, agent_context) do
+      {:ok, result, updated_context} ->
+        {:ok, json_rpc_response(id, result), updated_context}
 
       {:error, error_msg} ->
-        {:ok, error_response(id, error_msg, nil)}
+        {:ok, error_response(id, error_msg, nil), agent_context}
     end
   end
 
-  defp process_request(%{"jsonrpc" => _} = request) do
+  defp process_request(%{"jsonrpc" => _} = request, agent_context) do
     id = Map.get(request, "id")
-    {:ok, error_response(id, "Missing method", nil)}
+    {:ok, error_response(id, "Missing method", nil), agent_context}
   end
 
-  defp process_request(_) do
+  defp process_request(_, agent_context) do
     {:error, :invalid_json_rpc}
   end
 
-  defp handle_method("initialize", _params) do
+  defp handle_method("initialize", _params, agent_context) do
     {:ok,
      %{
        "protocolVersion" => @mcp_version,
@@ -82,10 +87,10 @@ defmodule BotArmyMcp.MCPProtocol do
          "name" => @server_name,
          "version" => @server_version
        }
-     }}
+     }, agent_context}
   end
 
-  defp handle_method("tools/list", _params) do
+  defp handle_method("tools/list", _params, agent_context) do
     case ToolDiscovery.list_tools() do
       {:ok, tools} ->
         {:ok,
@@ -98,26 +103,29 @@ defmodule BotArmyMcp.MCPProtocol do
                  "inputSchema" => tool.inputSchema
                }
              end)
-         }}
+         }, agent_context}
 
       {:error, reason} ->
         {:error, "Failed to list tools: #{inspect(reason)}"}
     end
   end
 
-  defp handle_method("tools/call", %{"name" => tool_name} = params) do
+  defp handle_method("tools/call", %{"name" => tool_name} = params, agent_context) do
     arguments = Map.get(params, "arguments", %{})
 
-    case NATSProxyService.call_tool(tool_name, arguments) do
+    case NATSProxyService.call_tool(tool_name, arguments, agent_context) do
       {:ok, result} ->
-        {:ok, %{"content" => [%{"type" => "text", "text" => Jason.encode!(result)}]}}
+        updated_context = AgentContext.register_call(agent_context)
+
+        {:ok, %{"content" => [%{"type" => "text", "text" => Jason.encode!(result)}]},
+         updated_context}
 
       {:error, reason} ->
         {:error, "Tool execution failed: #{inspect(reason)}"}
     end
   end
 
-  defp handle_method(method, _params) do
+  defp handle_method(method, _params, agent_context) do
     {:error, "Unknown method: #{method}"}
   end
 

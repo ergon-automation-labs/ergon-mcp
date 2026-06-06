@@ -52,9 +52,13 @@ defmodule BotArmyMcp.Application do
       # Bot-specific workers and pollers go here (GenServers that do async work)
       # Examples: Scheduler, Poller, Watcher
       # Pattern: gated with if @env == :test to prevent long-running processes in test
+      # Phase 1 (Tool Discovery): ToolDiscovery, MCPServer
+      # Phase 2 (Bidirectional Context): CircuitBreaker, AgentContextResponder
       [
+        {BotArmyMcp.CircuitBreaker, []},
         {BotArmyMcp.ToolDiscovery, [cache_ttl_ms: 60_000]},
         {BotArmyMcp.MCPServer, [port: 14_223]},
+        {BotArmyMcp.NATS.AgentContextResponder, []},
         {BotArmyMcp.CatalogStore, []},
         {BotArmyMcp.ConfigStore, []},
         {BotArmyMcp.CatalogFetcher, []},
