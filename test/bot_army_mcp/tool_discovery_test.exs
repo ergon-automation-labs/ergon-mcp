@@ -16,7 +16,7 @@ defmodule BotArmyMcp.ToolDiscoveryTest do
         {:ok, tools} ->
           # Should have at least some tools from active bots
           assert is_list(tools)
-          assert length(tools) > 0
+          assert tools != []
 
           # Each tool should have required fields
           Enum.each(tools, fn tool ->
