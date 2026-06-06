@@ -23,11 +23,11 @@ defmodule BotArmyMcp.AgentContextTest do
 
       envelope = AgentContext.build_envelope(ctx, tool_name, arguments)
 
-      assert envelope["command"] == arguments
-      assert envelope["agent_context"]["session_id"] == ctx.session_id
-      assert envelope["agent_context"]["source"] == "claude_code"
-      assert envelope["agent_context"]["tool_name"] == tool_name
-      assert envelope["agent_context"]["call_sequence"] == 1
+      assert envelope.command == arguments
+      assert envelope.agent_context.session_id == ctx.session_id
+      assert envelope.agent_context.source == "claude_code"
+      assert envelope.agent_context.tool_name == tool_name
+      assert envelope.agent_context.call_sequence == 1
     end
   end
 
@@ -43,7 +43,7 @@ defmodule BotArmyMcp.AgentContextTest do
 
       # Envelope reflects updated sequence
       envelope = AgentContext.build_envelope(ctx2, "test.subject", %{})
-      assert envelope["agent_context"]["call_sequence"] == 3
+      assert envelope.agent_context.call_sequence == 3
     end
   end
 
