@@ -53,7 +53,7 @@ defmodule BotArmyMcp.MCPProtocol do
 
   alias BotArmyMcp.AgentContext
 
-  defp process_request(%{"jsonrpc" => "2.0", "method" => method} = request, _agent_context) do
+  defp process_request(%{"jsonrpc" => "2.0", "method" => method} = request, agent_context) do
     id = Map.get(request, "id")
     params = Map.get(request, "params", %{})
 
@@ -71,7 +71,7 @@ defmodule BotArmyMcp.MCPProtocol do
     {:ok, error_response(id, "Missing method", nil), agent_context}
   end
 
-  defp process_request(_, agent_context) do
+  defp process_request(_, _agent_context) do
     {:error, :invalid_json_rpc}
   end
 
