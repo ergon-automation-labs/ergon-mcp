@@ -4,8 +4,13 @@ defmodule BotArmyMcp.MCPProtocolTest do
 
   alias BotArmyMcp.MCPProtocol
 
-  describe "handle_request/1" do
-    test "handles initialize request" do
+  describe "handle_request/2" do
+    setup do
+      agent_context = BotArmyMcp.AgentContext.create()
+      {:ok, agent_context: agent_context}
+    end
+
+    test "handles initialize request", %{agent_context: agent_context} do
       request =
         Jason.encode!(%{
           "jsonrpc" => "2.0",
@@ -14,7 +19,7 @@ defmodule BotArmyMcp.MCPProtocolTest do
           "params" => %{}
         })
 
-      {:ok, response_json} = MCPProtocol.handle_request(request)
+      {:ok, response_json, _} = MCPProtocol.handle_request(request, agent_context)
       response = Jason.decode!(response_json)
 
       assert response["id"] == 1
@@ -22,7 +27,7 @@ defmodule BotArmyMcp.MCPProtocolTest do
       assert response["result"]["serverInfo"]["name"] == "bot_army_mcp"
     end
 
-    test "returns error for unknown method" do
+    test "returns error for unknown method", %{agent_context: agent_context} do
       request =
         Jason.encode!(%{
           "jsonrpc" => "2.0",
@@ -31,24 +36,24 @@ defmodule BotArmyMcp.MCPProtocolTest do
           "params" => %{}
         })
 
-      {:ok, response_json} = MCPProtocol.handle_request(request)
+      {:ok, response_json, _} = MCPProtocol.handle_request(request, agent_context)
       response = Jason.decode!(response_json)
 
       assert response["id"] == 1
       assert response["error"]["message"] =~ "Unknown method"
     end
 
-    test "handles invalid JSON gracefully" do
+    test "handles invalid JSON gracefully", %{agent_context: agent_context} do
       request = "not valid json"
 
-      {:ok, response_json} = MCPProtocol.handle_request(request)
+      {:ok, response_json, _} = MCPProtocol.handle_request(request, agent_context)
       response = Jason.decode!(response_json)
 
       # Should return error response
       assert response["error"]["message"] =~ "Invalid request"
     end
 
-    test "handles tools/list request" do
+    test "handles tools/list request", %{agent_context: agent_context} do
       # Mock or skip if ToolDiscovery unavailable
       request =
         Jason.encode!(%{
@@ -58,7 +63,7 @@ defmodule BotArmyMcp.MCPProtocolTest do
           "params" => %{}
         })
 
-      {:ok, response_json} = MCPProtocol.handle_request(request)
+      {:ok, response_json, _} = MCPProtocol.handle_request(request, agent_context)
       response = Jason.decode!(response_json)
 
       case response do
@@ -72,7 +77,7 @@ defmodule BotArmyMcp.MCPProtocolTest do
       end
     end
 
-    test "preserves request ID in response" do
+    test "preserves request ID in response", %{agent_context: agent_context} do
       request =
         Jason.encode!(%{
           "jsonrpc" => "2.0",
@@ -81,7 +86,7 @@ defmodule BotArmyMcp.MCPProtocolTest do
           "params" => %{}
         })
 
-      {:ok, response_json} = MCPProtocol.handle_request(request)
+      {:ok, response_json, _} = MCPProtocol.handle_request(request, agent_context)
       response = Jason.decode!(response_json)
 
       assert response["id"] == "custom-id-123"
