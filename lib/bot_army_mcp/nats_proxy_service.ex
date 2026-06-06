@@ -38,24 +38,12 @@ defmodule BotArmyMcp.NATSProxyService do
         timeout_ms \\ @default_timeout_ms
       ) do
     try do
-      if not BotArmyMcp.CircuitBreaker.available?(tool_name) do
+      unless BotArmyMcp.CircuitBreaker.available?(tool_name) do
         status = BotArmyMcp.CircuitBreaker.status(tool_name)
         Logger.warning("Circuit breaker open for #{tool_name}: #{status.last_error}")
         {:error, {:circuit_open, "Too many failures for #{tool_name}"}}
       else
-        case GenServer.whereis(Connection) do
-          nil ->
-            {:error, :nats_connection_unavailable}
-
-          _ ->
-            case GenServer.call(Connection, :get_connection, timeout_ms) do
-              {:ok, conn} ->
-                execute_nats_request(conn, tool_name, arguments, agent_context, timeout_ms)
-
-              {:error, reason} ->
-                {:error, reason}
-            end
-        end
+        call_with_connection(Connection, tool_name, arguments, agent_context, timeout_ms)
       end
     rescue
       e ->
@@ -67,6 +55,22 @@ defmodule BotArmyMcp.NATSProxyService do
   # Private
 
   alias BotArmyMcp.AgentContext
+
+  defp call_with_connection(connection_mod, tool_name, arguments, agent_context, timeout_ms) do
+    case GenServer.whereis(connection_mod) do
+      nil ->
+        {:error, :nats_connection_unavailable}
+
+      _ ->
+        case GenServer.call(connection_mod, :get_connection, timeout_ms) do
+          {:ok, conn} ->
+            execute_nats_request(conn, tool_name, arguments, agent_context, timeout_ms)
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+    end
+  end
 
   defp execute_nats_request(conn, subject, arguments, agent_context, timeout_ms) do
     body =
