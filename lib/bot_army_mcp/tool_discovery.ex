@@ -51,6 +51,43 @@ defmodule BotArmyMcp.ToolDiscovery do
     end
   end
 
+  @doc """
+  Find tools with context-aware filtering and semantic matching.
+
+  Combines semantic matching (from query) with context-aware filtering (health,
+  availability, user context). Returns tools ranked by both semantic relevance
+  and context appropriateness.
+
+  Context map supports:
+    - `:focus_mode` - "deep_work" | "shallow_work" | "break"
+    - `:max_timeout_ms` - prefer tools with timeout <= this value
+    - `:min_health_score` - minimum health score (0.0-1.0)
+    - `:bot_health_map` - map of bot_name -> "healthy"|"degraded"|"unhealthy"
+    - `:intent` - user intent for capability matching
+
+  Options:
+    - `:limit` - Maximum results (default: 10)
+  """
+  @spec find_tools_with_context(binary(), map(), Keyword.t()) ::
+          {:ok, [map()]} | {:error, term()}
+  def find_tools_with_context(query, context \\ %{}, opts \\ []) do
+    case list_tools() do
+      {:ok, tools} ->
+        # First apply semantic matching to get ranked by query relevance
+        semantic_matches =
+          BotArmyMcp.SemanticToolMatcher.find_tools(tools, query, limit: 50)
+
+        # Then apply context-aware filtering to the semantic results
+        filtered_tools =
+          BotArmyMcp.ContextAwareToolFilter.filter_tools(semantic_matches, context, opts)
+
+        {:ok, filtered_tools}
+
+      error ->
+        error
+    end
+  end
+
   @doc "Force immediate refresh of tool catalog."
   @spec refresh() :: :ok
   def refresh do
