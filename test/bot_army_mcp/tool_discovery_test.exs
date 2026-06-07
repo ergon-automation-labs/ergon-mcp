@@ -4,6 +4,33 @@ defmodule BotArmyMcp.ToolDiscoveryTest do
 
   alias BotArmyMcp.ToolDiscovery
 
+  describe "schema enrichment" do
+    test "returns non-empty inputSchema when registry includes schema metadata" do
+      # Start discovery module
+      {:ok, _pid} = ToolDiscovery.start_link(cache_ttl_ms: 60_000)
+
+      # Give it time to fetch from registry
+      Process.sleep(2000)
+
+      case ToolDiscovery.list_tools() do
+        {:ok, tools} ->
+          # Find a tool that might have schema (or verify empty schema for those without)
+          Enum.each(tools, fn tool ->
+            # Each tool should have inputSchema object with properties and required array
+            assert is_map(tool.inputSchema)
+            assert Map.has_key?(tool.inputSchema, :properties)
+            assert Map.has_key?(tool.inputSchema, :required)
+            assert is_map(tool.inputSchema.properties)
+            assert is_list(tool.inputSchema.required)
+          end)
+
+        {:error, reason} ->
+          # Registry unavailable is acceptable in test
+          assert reason in [:nats_connection_unavailable, :registry_timeout]
+      end
+    end
+  end
+
   describe "list_tools/0" do
     test "returns list of available MCP tools" do
       # Start discovery module

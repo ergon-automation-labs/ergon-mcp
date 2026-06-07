@@ -157,13 +157,18 @@ defmodule BotArmyMcp.ToolDiscovery do
   end
 
   defp to_mcp_tool_definition(subject_def, _bot_name) do
+    # Extract schema from registry metadata if available
+    schema = subject_def["schema"] || %{}
+    properties = schema["properties"] || %{}
+    required = schema["required"] || []
+
     %{
       name: subject_def["subject"],
       description: subject_def["description"] || "Bot Army service",
       inputSchema: %{
         type: "object",
-        properties: %{},
-        required: []
+        properties: properties,
+        required: required
       },
       timeout_ms: subject_def["timeout_ms"] || 5000
     }
