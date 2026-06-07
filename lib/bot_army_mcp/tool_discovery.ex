@@ -30,6 +30,27 @@ defmodule BotArmyMcp.ToolDiscovery do
     GenServer.call(__MODULE__, :list_tools)
   end
 
+  @doc """
+  Find tools matching a natural language query.
+
+  Uses semantic matching to rank tools by relevance.
+
+  Options:
+    - `:limit` - Maximum number of results (default: 10)
+    - `:min_score` - Minimum relevance score (default: 0.0)
+  """
+  @spec find_tools(binary(), Keyword.t()) :: {:ok, [map()]} | {:error, term()}
+  def find_tools(query, opts \\ []) when is_binary(query) do
+    case list_tools() do
+      {:ok, tools} ->
+        matched_tools = BotArmyMcp.SemanticToolMatcher.find_tools(tools, query, opts)
+        {:ok, matched_tools}
+
+      error ->
+        error
+    end
+  end
+
   @doc "Force immediate refresh of tool catalog."
   @spec refresh() :: :ok
   def refresh do
