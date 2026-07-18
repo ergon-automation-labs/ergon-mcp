@@ -21,7 +21,7 @@ defmodule BotArmyMcp.NATS.AgentContextResponder do
   use GenServer
   require Logger
 
-  alias BotArmyRuntime.NATS.Connection
+  alias BotArmyLibraryRuntime.NATS.Connection
 
   @subject "bot_army.agent.context.get"
 

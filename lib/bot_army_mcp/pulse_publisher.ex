@@ -20,7 +20,7 @@ defmodule BotArmyMcp.PulsePublisher do
   use GenServer
   require Logger
 
-  alias BotArmyRuntime.NATS.Publisher
+  alias BotArmyLibraryRuntime.NATS.Publisher
 
   # Under Synapse `system.health` stale window (90s); 30s cadence leaves margin for jitter.
   @health_interval_ms 30 * 1000
@@ -87,13 +87,13 @@ defmodule BotArmyMcp.PulsePublisher do
   end
 
   defp publish_system_health(%{started_at: started_at}) do
-    tenant_id = System.get_env("BOT_ARMY_TENANT_ID") || BotArmyRuntime.Tenant.default_tenant_id()
+    tenant_id = System.get_env("BOT_ARMY_TENANT_ID") || BotArmyLibraryRuntime.Tenant.default_tenant_id()
     signal = health_signal()
 
     uptime_seconds =
       DateTime.diff(DateTime.utc_now() |> DateTime.truncate(:second), started_at, :second)
 
-    case BotArmyRuntime.SynapseHealth.publish(
+    case BotArmyLibraryRuntime.SynapseHealth.publish(
            source: @envelope_source,
            service: @service_name,
            tenant_id: tenant_id,

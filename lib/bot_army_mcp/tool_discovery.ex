@@ -12,7 +12,7 @@ defmodule BotArmyMcp.ToolDiscovery do
   use GenServer
   require Logger
 
-  alias BotArmyRuntime.NATS.Connection
+  alias BotArmyLibraryRuntime.NATS.Connection
 
   @cache_ttl_ms 60_000
   @registry_subject "bot_army.registry.bots.list"

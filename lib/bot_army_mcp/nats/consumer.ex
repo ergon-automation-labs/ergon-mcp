@@ -13,9 +13,9 @@ defmodule BotArmyMcp.NATS.Consumer do
   use GenServer
   require Logger
 
-  alias BotArmyCore.NATS.Decoder
-  alias BotArmyRuntime.NATS.{Connection, Reply, Tracing}
-  alias BotArmyRuntime.Registry
+  alias BotArmyLibraryCore.NATS.Decoder
+  alias BotArmyLibraryRuntime.NATS.{Connection, Reply, Tracing}
+  alias BotArmyLibraryRuntime.Registry
 
   alias BotArmyMcp.{CatalogStore, ConfigStore}
 

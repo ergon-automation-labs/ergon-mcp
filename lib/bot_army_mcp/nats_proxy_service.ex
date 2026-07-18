@@ -8,7 +8,7 @@ defmodule BotArmyMcp.NATSProxyService do
 
   require Logger
 
-  alias BotArmyRuntime.NATS.Connection
+  alias BotArmyLibraryRuntime.NATS.Connection
 
   @default_timeout_ms 5000
 
