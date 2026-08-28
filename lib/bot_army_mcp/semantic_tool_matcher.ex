@@ -145,6 +145,5 @@ defmodule BotArmyMcp.SemanticToolMatcher do
 
   defp extract_property_names(_), do: []
 
-  defp to_float(num) when is_integer(num), do: num / 1.0
-  defp to_float(num) when is_float(num), do: num
+  defp to_float(num), do: num / 1.0
 end
