@@ -14,7 +14,8 @@ defmodule BotArmyMcp.NATS.Consumer do
   require Logger
 
   alias BotArmyLibraryCore.NATS.Decoder
-  alias BotArmyLibraryRuntime.NATS.{Connection, Reply, Tracing}
+  alias BotArmyLibraryRuntime.NATS.{Connection, Reply}
+  alias BotArmyLibraryRuntime.Tracing
   alias BotArmyLibraryRuntime.Registry
 
   alias BotArmyMcp.{CatalogStore, ConfigStore}
