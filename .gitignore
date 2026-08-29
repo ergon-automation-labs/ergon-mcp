@@ -27,3 +27,6 @@ _build_cursor_test/
 .push-validated
 # Local build-state marker written by the shared compile pipeline (make/common.mk)
 .compile-hash
+
+# runtime publish/validation state markers (never commit)
+.release-published
