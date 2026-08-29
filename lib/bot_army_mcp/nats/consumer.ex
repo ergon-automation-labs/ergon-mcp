@@ -21,6 +21,7 @@ defmodule BotArmyMcp.NATS.Consumer do
   alias BotArmyMcp.{CatalogStore, ConfigStore}
 
   @reconnect_delay_ms 5000
+  @registry_heartbeat_ms 20_000
   @version Mix.Project.config()[:version]
 
   # Register subjects with their metadata for runtime discovery
@@ -131,8 +132,11 @@ defmodule BotArmyMcp.NATS.Consumer do
             ])
 
           # Register subjects for runtime discovery
-          deployment_status = Application.get_env(:bot_army_mcp, :deployment_status, "experimental")
+          deployment_status =
+            Application.get_env(:bot_army_mcp, :deployment_status, "experimental")
+
           Registry.register("mcp", @subjects, @version, deployment_status)
+          Process.send_after(self(), :registry_heartbeat, @registry_heartbeat_ms)
 
           {:noreply, %{state | subscriptions: subscriptions, conn: conn}}
 
@@ -155,6 +159,17 @@ defmodule BotArmyMcp.NATS.Consumer do
   @impl true
   def handle_info(:connect_retry, state) do
     {:noreply, state, {:continue, :connect}}
+  end
+
+  @impl true
+  def handle_info(:registry_heartbeat, state) do
+    if state.subscriptions != [] do
+      deployment_status = Application.get_env(:bot_army_mcp, :deployment_status, "experimental")
+      Registry.register("mcp", @subjects, @version, deployment_status)
+      Process.send_after(self(), :registry_heartbeat, @registry_heartbeat_ms)
+    end
+
+    {:noreply, state}
   end
 
   @impl true
