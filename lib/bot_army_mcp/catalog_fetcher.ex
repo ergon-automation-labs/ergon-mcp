@@ -152,7 +152,8 @@ defmodule BotArmyMcp.CatalogFetcher do
 
   defp http_get_json(url) do
     case http_get(url) do
-      {:ok, body} -> Jason.decode(body)
+      {:ok, body} when is_binary(body) -> Jason.decode(body)
+      {:ok, body} -> {:ok, body}
       error -> error
     end
   end

@@ -32,7 +32,7 @@ defmodule BotArmyMcp.NATS.AgentContextResponder do
   @impl true
   def init(_opts) do
     send(self(), :subscribe)
-    {:ok, %{subscription: nil}}
+    {:ok, %{subscription: nil, conn: nil}}
   end
 
   @impl true

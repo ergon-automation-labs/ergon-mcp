@@ -112,38 +112,40 @@ defmodule BotArmyMcp.NATS.Consumer do
 
   @impl true
   def handle_continue(:connect, state) do
-    case GenServer.call(Connection, :get_connection, 5000) do
-      {:ok, conn} ->
-        Connection.subscribe_to_status()
-        Logger.info("Connected to NATS, subscribing to topics")
+    try do
+      case GenServer.call(Connection, :get_connection, 5000) do
+        {:ok, conn} ->
+          Connection.subscribe_to_status()
+          Logger.info("Connected to NATS, subscribing to topics")
 
-        subscriptions =
-          subscribe_subjects(conn, [
-            @status_subject,
-            @tools_execute_subject,
-            @catalog_suggest_subject,
-            @tools_register_subject,
-            @config_get_subject,
-            @config_set_subject,
-            @config_list_subject,
-            @github_pr_get_subject,
-            @github_issue_list_subject,
-            @github_repo_file_subject,
-            @github_ci_status_subject,
-            @github_pr_comment_subject,
-            @github_issue_create_subject,
-            @github_issue_close_subject,
-            @github_pr_approve_subject
-          ])
+          subscriptions =
+            subscribe_subjects(conn, [
+              @status_subject,
+              @tools_execute_subject,
+              @catalog_suggest_subject,
+              @tools_register_subject,
+              @config_get_subject,
+              @config_set_subject,
+              @config_list_subject
+            ])
 
-        # Register subjects for runtime discovery
-        deployment_status = Application.get_env(:bot_army_mcp, :deployment_status, "experimental")
-        Registry.register("mcp", @subjects, @version, deployment_status)
+          # Register subjects for runtime discovery
+          deployment_status = Application.get_env(:bot_army_mcp, :deployment_status, "experimental")
+          Registry.register("mcp", @subjects, @version, deployment_status)
 
-        {:noreply, %{state | subscriptions: subscriptions, conn: conn}}
+          {:noreply, %{state | subscriptions: subscriptions, conn: conn}}
 
-      {:error, _reason} ->
-        Logger.warning("NATS connection not ready, will retry")
+        {:error, _reason} ->
+          Logger.warning("NATS connection not ready, will retry")
+          Process.send_after(self(), :connect_retry, @reconnect_delay_ms)
+          {:noreply, state}
+      end
+    rescue
+      e ->
+        Logger.warning(
+          "NATS subscribe failed during connect: #{Exception.message(e)}, will retry"
+        )
+
         Process.send_after(self(), :connect_retry, @reconnect_delay_ms)
         {:noreply, state}
     end

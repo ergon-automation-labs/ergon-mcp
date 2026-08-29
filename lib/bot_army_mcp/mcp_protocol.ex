@@ -87,7 +87,7 @@ defmodule BotArmyMcp.MCPProtocol do
   end
 
   defp handle_method("tools/list", _params, agent_context) do
-    case ToolDiscovery.list_tools() do
+    case list_tools_for_mode() do
       {:ok, tools} ->
         {:ok,
          %{
@@ -107,22 +107,48 @@ defmodule BotArmyMcp.MCPProtocol do
   end
 
   defp handle_method("tools/call", %{"name" => tool_name} = params, agent_context) do
-    arguments = Map.get(params, "arguments", %{})
+    if callable?(tool_name) do
+      arguments = Map.get(params, "arguments", %{})
+      timeout_ms = BotArmyMcp.CuratedTools.timeout_ms(tool_name)
 
-    case NATSProxyService.call_tool(tool_name, arguments, agent_context) do
-      {:ok, result} ->
-        updated_context = AgentContext.register_call(agent_context)
+      case NATSProxyService.call_tool(tool_name, arguments, agent_context, timeout_ms) do
+        {:ok, result} ->
+          updated_context = AgentContext.register_call(agent_context)
 
-        {:ok, %{"content" => [%{"type" => "text", "text" => Jason.encode!(result)}]},
-         updated_context}
+          {:ok, %{"content" => [%{"type" => "text", "text" => Jason.encode!(result)}]},
+           updated_context}
 
-      {:error, reason} ->
-        {:error, "Tool execution failed: #{inspect(reason)}"}
+        {:error, reason} ->
+          {:error, "Tool execution failed: #{inspect(reason)}"}
+      end
+    else
+      {:error, "Tool not allowed: #{tool_name}"}
     end
   end
 
   defp handle_method(method, _params, _agent_context) do
     {:error, "Unknown method: #{method}"}
+  end
+
+  defp tools_mode do
+    Application.get_env(:bot_army_mcp, :tools_mode, :curated)
+  end
+
+  defp list_tools_for_mode do
+    case tools_mode() do
+      :curated ->
+        {:ok, BotArmyMcp.CuratedTools.all() |> Map.values() |> Enum.sort_by(& &1.name)}
+
+      :all ->
+        ToolDiscovery.list_tools()
+    end
+  end
+
+  defp callable?(tool_name) do
+    case tools_mode() do
+      :curated -> tool_name in BotArmyMcp.CuratedTools.names()
+      :all -> true
+    end
   end
 
   defp json_rpc_response(id, result) when is_nil(id) do

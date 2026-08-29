@@ -115,9 +115,19 @@ defmodule BotArmyMcp.ToolDiscovery do
     else
       # Force refresh
       case fetch_tools_from_registry() do
-        {:ok, tools} ->
-          new_state = %{state | tools: tools, cached_at: DateTime.utc_now()}
-          {:reply, {:ok, tools}, new_state}
+        {:ok, dynamic_tools} ->
+          # Filter out dynamic tools that are already covered by curated tools
+          filtered_tools =
+            Enum.filter(dynamic_tools, fn tool ->
+              not BotArmyMcp.CuratedTools.subject_curated?(tool.name)
+            end)
+
+          # Merge with curated tools
+          curated_tools = BotArmyMcp.CuratedTools.all() |> Map.values()
+          final_tools = (filtered_tools ++ curated_tools) |> Enum.sort_by(& &1.name)
+
+          new_state = %{state | tools: final_tools, cached_at: DateTime.utc_now()}
+          {:reply, {:ok, final_tools}, new_state}
 
         {:error, reason} ->
           Logger.warning("Failed to fetch tools from registry: #{inspect(reason)}")

@@ -21,20 +21,11 @@ defmodule BotArmyMcp.Application do
 
     children =
       []
-      |> maybe_add_repo()
       |> maybe_add_pulse_publisher()
       |> maybe_add_workers()
 
     opts = [strategy: :one_for_one, name: BotArmyMcp.Supervisor]
     Supervisor.start_link(children, opts)
-  end
-
-  defp maybe_add_repo(children) do
-    if @env == :test do
-      children
-    else
-      [{BotArmyMcp.Repo, []} | children]
-    end
   end
 
   defp maybe_add_pulse_publisher(children) do
