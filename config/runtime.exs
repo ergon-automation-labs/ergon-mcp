@@ -7,7 +7,7 @@ if config_env() != :test do
     case ConfigLoader.get("NATS_SERVERS") do
       nil ->
         nats_host = ConfigLoader.get("NATS_HOST", "localhost")
-        nats_port = ConfigLoader.get("NATS_PORT", "4223") |> String.to_integer()
+        nats_port = ConfigLoader.get("NATS_PORT", "4222") |> String.to_integer()
         [{nats_host, nats_port}]
 
       servers_string ->
