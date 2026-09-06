@@ -4,11 +4,15 @@ defmodule BotArmyMcp.MixProject do
   def project do
     [
       app: :bot_army_mcp,
-      version: "0.2.16",
+      version: "0.2.17",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      default_release: :surface_mcp_bot,
       releases: [
+        surface_mcp_bot: [
+          applications: [bot_army_mcp: :permanent]
+        ],
         mcp_bot: [
           applications: [bot_army_mcp: :permanent]
         ]
