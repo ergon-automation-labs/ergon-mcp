@@ -91,7 +91,12 @@ release: check
 	@echo "Building OTP release"
 	@echo "==============================================="
 	rm -rf _build/prod/rel/mcp_bot
-	MIX_ENV=prod $(MIX) release
+	# --name mcp_bot is required: mix.exs defines both `surface_mcp_bot` (its
+	# `default_release`) and `mcp_bot`, and a bare `mix release` builds the
+	# default — which is not the release this Makefile tars, the salt state
+	# downloads (mcp_bot-<version>.tar.gz) or the deploy runs (bin/mcp_bot).
+	# That mismatch silently broke publish-release from v0.2.11 to v0.2.19.
+	MIX_ENV=prod $(MIX) release --name mcp_bot
 	@echo ""
 	@echo "✓ Release built successfully"
 	@echo "Location: _build/prod/rel/mcp_bot/"
