@@ -134,16 +134,11 @@ publish-release: release
 	else \
 		gh release create "v$$VERSION" "$$TARBALL" \
 			--title "Release v$$VERSION" \
-			--notes "MCP Bot Elixir release v$$VERSION. Download and deploy with Jenkins." \
+			--notes "MCP Bot Elixir release v$$VERSION." \
 			--draft=false; \
-	fi; \
-	echo "✓ Release published to GitHub"; \
-	echo ""; \
-	echo "Next steps:"; \
-	echo "1. Jenkins will automatically detect the new release"; \
-	echo "2. Trigger deployment in Jenkins UI or wait for auto-deployment"; \
-	echo "3. Check deployment status: make jenkins-logs"
+	fi
 
+	@$(MAKE) publish-deploy-event TARGET=air
 push-and-publish:
 	@git push && $(MAKE) publish-release
 
